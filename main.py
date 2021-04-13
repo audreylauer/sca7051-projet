@@ -5,11 +5,14 @@
 # Packages
 import numpy as np
 
-# Initialisation des variables
-
 # Constantes
 dt = 1 # sec
 pres = 1000e2 # Pa
+taux_refroidissement = -2/(24*60*60) #K/s
+
+# Variables initiales
+s = 1
+temperature = 15 + 273.15 # degC
 
 # Boucle temporelle
 
