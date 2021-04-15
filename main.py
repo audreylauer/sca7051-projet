@@ -29,17 +29,60 @@ cv = cp-Rd
 #
 ########## Variables initiales
 #
-
 s = 1
 temperature = 15 + 273.15 # degC
 presvapsat = 1704.2 # Pa H2O, le esw
 presvap = 1704.2 # Pa H2O, le e
 qv = (Rd/Rv)*(presvap/pres) # kg H2O/kg air
-print(qv)
-
 
 #
-########## Boucle temporelle
+########## Boucles temporelles
 #
+#
+dt_list=[]
+for t in range(0,28800+1):
+    dt_list.append(t)
+    
+# Températures pour un pas de temps de 8h
+temperature_list = []
+temperature_list.append(temperature) ## valeur initiale au pas de temps 0
 
-
+for i in range (0,28800):
+    temperature=temperature + taux_refroidissement
+    temperature_list.append(temperature)  
+#
+#
+# Pression de vapeur saturante pour un pas de 8h (fonction de T)
+presvapsat_list=[]
+presvapsat_list.append(presvapsat)
+for j in range (0,28800):
+    presvapsat = presvapsat + (Lv*presvapsat*taux_refroidissement/Rv/(temperature_list[j+1])**2)
+    presvapsat_list.append(presvapsat)
+#
+#
+########### Tests
+#
+#
+print(temperature_list[0]) # Température initiale
+print(temperature_list[4320]) # T après 1.2 heures
+print(temperature_list[28800]) # T après 8 heures
+print(presvapsat_list[0]) # esw initial
+print(presvapsat_list[4320]) # esw après 1.2 heures
+print(presvapsat_list[28800]) # esw après 8 heures
+#
+#
+########### Graphiques
+#
+#
+# Pour temperature
+plot_temperature = mpl.pyplot.figure(1)
+mpl.pyplot.plot(dt_list,temperature_list)
+#
+#
+# Pour presvapsat
+plot_presvapsat = mpl.pyplot.figure(2)
+mpl.pyplot.plot(dt_list,presvapsat_list)
+#
+#
+# Je me surprends moi même d'avoir réussi à faire ça. J'ai bel et bien checker pour esw et c'est pas une droite, mais une très légerte courbe.
+# J'ai fait le test en changeant dT/dt pour -20/86400, j'ai été récupéré la valeur de esw que j'obtenais pour T=14C, et je l'ai comparée avec la table des constantes, et c'est pareil (1597.6), donc ça marche!
