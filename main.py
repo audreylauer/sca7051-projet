@@ -40,14 +40,15 @@ qv = (Rd/Rv)*(presvap/pres) # kg H2O/kg air
 #
 #
 dt_list=[]
-for t in range(0,28800+1):
+timerange = 28800*dt # 8 heures
+for t in range(0,timerange+1):
     dt_list.append(t)
     
 # Températures pour un pas de temps de 8h
 temperature_list = []
 temperature_list.append(temperature) ## valeur initiale au pas de temps 0
 
-for i in range (0,28800):
+for i in range (0,timerange):
     temperature=temperature + taux_refroidissement
     temperature_list.append(temperature)  
 #
@@ -55,7 +56,7 @@ for i in range (0,28800):
 # Pression de vapeur saturante pour un pas de 8h (fonction de T)
 presvapsat_list=[]
 presvapsat_list.append(presvapsat)
-for j in range (0,28800):
+for j in range (0,timerange):
     presvapsat = presvapsat + (Lv*presvapsat*taux_refroidissement/Rv/(temperature_list[j+1])**2)
     presvapsat_list.append(presvapsat)
 #
@@ -65,10 +66,10 @@ for j in range (0,28800):
 #
 print(temperature_list[0]) # Température initiale
 print(temperature_list[4320]) # T après 1.2 heures
-print(temperature_list[28800]) # T après 8 heures
+print(temperature_list[timerange]) # T après 8 heures
 print(presvapsat_list[0]) # esw initial
 print(presvapsat_list[4320]) # esw après 1.2 heures
-print(presvapsat_list[28800]) # esw après 8 heures
+print(presvapsat_list[timerange]) # esw après 8 heures
 #
 #
 ########### Graphiques
