@@ -13,6 +13,9 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
 
+test = False
+version_prelim = True
+
 # Constantes d'entrées
 dt = 1 # sec
 pres = 1000e2 # Pa
@@ -24,33 +27,53 @@ cp = 1005 # J/kg
 cv = cp - Rd
 
 # Variables initiales
-s = 1
-temperature_initiale = 15 + 273.15 # degC
-pres_vapsat_initiale = 1704.2 # Pa H2O, le esw
-pres_vap_initiale    = 1704.2 # Pa H2O, le e
-qv = (Rd/Rv)*(pres_vap_initiale/pres) # kg H2O/kg air
+S = 1
+temperature_initial = 15 + 273.15 # degC
+pres_vapsat_initial = 1704.2 # Pa H2O, le esw
+pres_vap_initial    = 1704.2 # Pa H2O, le e
+qv = (Rd/Rv)*(pres_vap_initial/pres) # kg H2O/kg air
 
-# Boucles temporelles
+if version_prelim:
+    rayon_initial = 0.2e-6 # m
+    concentration_initial = 0
+    masse_initial = 0
+
+# Boucle temporelle
 timerange = (8*60*60)*dt # 8 heures
-dt_list = np.arange(0, timerange+1, dt)
-    
-# Températures pour un pas de temps de 8h
-temperature = temperature_initiale + dt_list*taux_refroidissement
+dt_list = np.arange(0, timerange+1, dt) # Pas de temps dans une liste
+temperature = temperature_initial + dt_list*taux_refroidissement # Températures pour un pas de temps de 8h
 
 # Pression de vapeur saturante pour un pas de 8h (fonction de T)
 pres_vapsat = []
-pres_vapsat.append(pres_vapsat_initiale)
-for i in range(1,timerange+1):
+pres_vapsat.append(pres_vapsat_initial)
+for i in range(1,timerange+1): # Début boucle temporelle
+    # Variables pronostiques
     pres_vapsat.append([])
     pres_vapsat[i] = pres_vapsat[i-1] + (Lv/Rv)*pres_vapsat[i-1]*taux_refroidissement*dt/temperature[i]**2
 
+#    # Calcul de S (avec approximation)
+#    S_prime = S[i-1] + P*dt
+#    C_Sprime = P - ( S_prime[i] - S[i-1] ) / dt
+#    S_double_prime = S[i-1] + (P - C_Sprime) * dt
+#
+#    if not version_prelim:
+#        C = P - (1 - S[i-1]) / dt
+#    else:
+        
+
+    # Variables diagnostiques
+#    rayon[i] = 3*qw[i] / (4*pi*rho_w*N[i])
+
+# Fin boucle temporelle
+
 # Tests
-print(temperature[0]) # Température initiale
-print(temperature[4320]) # T après 1.2 heures
-print(temperature[timerange]) # T après 8 heures
-print(pres_vapsat[0]) # esw initial
-print(pres_vapsat[4320]) # esw après 1.2 heures
-print(pres_vapsat[timerange]) # esw après 8 heures
+if test:
+    print(temperature[0]) # Température initiale
+    print(temperature[4320]) # T après 1.2 heures
+    print(temperature[timerange]) # T après 8 heures
+    print(pres_vapsat[0]) # esw initial
+    print(pres_vapsat[4320]) # esw après 1.2 heures
+    print(pres_vapsat[timerange]) # esw après 8 heures
 
 # Graphiques
 # Pour temperature
