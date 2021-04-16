@@ -26,9 +26,9 @@ cv = cp - Rd
 # Variables initiales
 s = 1
 temperature_initiale = 15 + 273.15 # degC
-presvapsat = 1704.2 # Pa H2O, le esw
-presvap = 1704.2 # Pa H2O, le e
-qv = (Rd/Rv)*(presvap/pres) # kg H2O/kg air
+pres_vapsat_initiale = 1704.2 # Pa H2O, le esw
+pres_vap_initiale    = 1704.2 # Pa H2O, le e
+qv = (Rd/Rv)*(pres_vap_initiale/pres) # kg H2O/kg air
 
 # Boucles temporelles
 timerange = (8*60*60)*dt # 8 heures
@@ -38,19 +38,19 @@ dt_list = np.arange(0, timerange+1, dt)
 temperature = temperature_initiale + dt_list*taux_refroidissement
 
 # Pression de vapeur saturante pour un pas de 8h (fonction de T)
-presvapsat_list = []
-presvapsat_list.append(presvapsat)
-for j in range (timerange):
-    presvapsat = presvapsat + (Lv*presvapsat*taux_refroidissement/Rv/(temperature[j+1])**2)
-    presvapsat_list.append(presvapsat)
+pres_vapsat = []
+pres_vapsat.append(pres_vapsat_initiale)
+for i in range(1,timerange+1):
+    pres_vapsat.append([])
+    pres_vapsat[i] = pres_vapsat[i-1] + (Lv/Rv)*pres_vapsat[i-1]*taux_refroidissement*dt/temperature[i]**2
 
 # Tests
 print(temperature[0]) # Température initiale
 print(temperature[4320]) # T après 1.2 heures
 print(temperature[timerange]) # T après 8 heures
-print(presvapsat_list[0]) # esw initial
-print(presvapsat_list[4320]) # esw après 1.2 heures
-print(presvapsat_list[timerange]) # esw après 8 heures
+print(pres_vapsat[0]) # esw initial
+print(pres_vapsat[4320]) # esw après 1.2 heures
+print(pres_vapsat[timerange]) # esw après 8 heures
 
 # Graphiques
 # Pour temperature
@@ -59,7 +59,7 @@ plt.plot(dt_list,temperature)
 
 # Pour presvapsat
 plot_presvapsat = plt.figure(2)
-plt.plot(dt_list,presvapsat_list)
+plt.plot(dt_list,pres_vapsat)
 
 plt.show()
 
