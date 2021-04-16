@@ -31,10 +31,8 @@ presvap = 1704.2 # Pa H2O, le e
 qv = (Rd/Rv)*(presvap/pres) # kg H2O/kg air
 
 # Boucles temporelles
-dt_list = []
-timerange = 28800*dt # 8 heures
-for t in range(timerange+1):
-    dt_list.append(t)
+timerange = (8*60*60)*dt # 8 heures
+dt_list = np.arange(0, timerange+1, dt)
     
 # Températures pour un pas de temps de 8h
 temperature_list = []
