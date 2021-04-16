@@ -12,6 +12,7 @@
 import numpy as np
 import math
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 import pandas as pd
 
 #
@@ -24,7 +25,7 @@ Rd = 287.04 # J/kgK
 Rv = 461.51 # J/kgK
 Lv = 2.4656e6 # J/kg
 cp = 1005 # J/kg
-cv = cp-Rd
+cv = cp - Rd
 
 #
 ########## Variables initiales
@@ -39,24 +40,24 @@ qv = (Rd/Rv)*(presvap/pres) # kg H2O/kg air
 ########## Boucles temporelles
 #
 #
-dt_list=[]
+dt_list = []
 timerange = 28800*dt # 8 heures
-for t in range(0,timerange+1):
+for t in range(timerange+1):
     dt_list.append(t)
     
 # Températures pour un pas de temps de 8h
 temperature_list = []
 temperature_list.append(temperature) ## valeur initiale au pas de temps 0
 
-for i in range (0,timerange):
-    temperature=temperature + taux_refroidissement
+for i in range (timerange):
+    temperature = temperature + taux_refroidissement
     temperature_list.append(temperature)  
 #
 #
 # Pression de vapeur saturante pour un pas de 8h (fonction de T)
-presvapsat_list=[]
+presvapsat_list = []
 presvapsat_list.append(presvapsat)
-for j in range (0,timerange):
+for j in range (timerange):
     presvapsat = presvapsat + (Lv*presvapsat*taux_refroidissement/Rv/(temperature_list[j+1])**2)
     presvapsat_list.append(presvapsat)
 #
@@ -76,13 +77,15 @@ print(presvapsat_list[timerange]) # esw après 8 heures
 #
 #
 # Pour temperature
-plot_temperature = mpl.pyplot.figure(1)
-mpl.pyplot.plot(dt_list,temperature_list)
+plot_temperature = plt.figure(1)
+plt.plot(dt_list,temperature_list)
 #
 #
 # Pour presvapsat
-plot_presvapsat = mpl.pyplot.figure(2)
-mpl.pyplot.plot(dt_list,presvapsat_list)
+plot_presvapsat = plt.figure(2)
+plt.plot(dt_list,presvapsat_list)
+
+plt.show()
 #
 #
 # Je me surprends moi même d'avoir réussi à faire ça. J'ai bel et bien checker pour esw et c'est pas une droite, mais une très légerte courbe.
