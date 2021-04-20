@@ -7,6 +7,7 @@ projet de modélisation d'un brouillard chaud.
 
 ## Étape 1 - calculer de_sw/dt
 
+![equation](https://latex.codecogs.com/gif.latex?\frac{d&space;e_{sw}}{dt}&space;=&space;\frac{L_v&space;e_{sw}}{R_vT^2}&space;\frac{dT}{dt})
 $$\frac{d e_{sw}}{dt} = \frac{L_v e_{sw}}{R_vT^2} \frac{dT}{dt}$$
 
 ## Étape 2 - S
