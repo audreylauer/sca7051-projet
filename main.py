@@ -27,7 +27,7 @@ cp = 1005 # J/kg
 cv = cp - Rd
 
 # Variables initiales
-S = 1
+S = [1]
 temperature_initial = 15 + 273.15 # degC
 pres_vapsat_initial = 1704.2 # Pa H2O, le esw
 pres_vap_initial    = 1704.2 # Pa H2O, le e
@@ -51,11 +51,15 @@ for i in range(1,timerange+1): # Début boucle temporelle
     pres_vapsat.append([])
     pres_vapsat[i] = pres_vapsat[i-1] + (Lv/Rv)*pres_vapsat[i-1]*taux_refroidissement*dt/temperature[i]**2
 
-#    # Calcul de S (avec approximation)
-#    S_prime = S[i-1] + P*dt
-#    C_Sprime = P - ( S_prime[i] - S[i-1] ) / dt
+    # Calcul de S (avec approximation)
+    S.append([])
+    P = -1 * ( S[i-1] / pres_vapsat[i-1] ) * (pres_vapsat[i] - pres_vapsat[i-1])/dt
+    S_prime = S[i-1] + P*dt
+    S[i] = S[i-1] + P*dt # si pas de consommation
+
+#    C_Sprime = P - ( S_prime - S[i-1] ) / dt
 #    S_double_prime = S[i-1] + (P - C_Sprime) * dt
-#
+
 #    if not version_prelim:
 #        C = P - (1 - S[i-1]) / dt
 #    else:
