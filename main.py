@@ -17,9 +17,10 @@ test = False
 version_prelim = True
 
 # Constantes d'entrées
+timerange = (8*60*60)*dt # 8 heures
 dt = 1 # sec
 pres = 1000e2 # Pa
-taux_refroidissement = -2/(24*60*60) # K/s
+taux_refroidissement = -10/(24*60*60) # K/s
 Rd = 287.04 # J/kgK
 Rv = 461.51 # J/kgK
 Lv = 2.4656e6 # J/kg
@@ -31,18 +32,20 @@ S = [1]
 temperature_initial = 15 + 273.15 # degC
 pres_vapsat_initial = 1704.2 # Pa H2O, le esw
 pres_vap_initial    = 1704.2 # Pa H2O, le e
+e_prime = [pres_vap_initial]
 qv = (Rd/Rv)*(pres_vap_initial/pres) # kg H2O/kg air
 
 if version_prelim:
     rayon_initial = 0.2e-6 # m
-    concentration_initial = 0
-    masse_initial = 0
+    concentration_initial = 1000
+    masse_initial = qv
 
 # Boucle temporelle
-timerange = (8*60*60)*dt # 8 heures
 dt_list = np.arange(0, timerange+1, dt) # Pas de temps dans une liste
 temperature = temperature_initial + dt_list*taux_refroidissement # Températures pour un pas de temps de 8h
 
+C_prime = [0]
+P = [0]
 # Pression de vapeur saturante pour un pas de 8h (fonction de T)
 pres_vapsat = []
 pres_vapsat.append(pres_vapsat_initial)
@@ -53,17 +56,16 @@ for i in range(1,timerange+1): # Début boucle temporelle
 
     # Calcul de S (avec approximation)
     S.append([])
-    P = -1 * ( S[i-1] / pres_vapsat[i-1] ) * (pres_vapsat[i] - pres_vapsat[i-1])/dt
-    S_prime = S[i-1] + P*dt
-    S[i] = S[i-1] + P*dt # si pas de consommation
-
-#    C_Sprime = P - ( S_prime - S[i-1] ) / dt
-#    S_double_prime = S[i-1] + (P - C_Sprime) * dt
-
-#    if not version_prelim:
-#        C = P - (1 - S[i-1]) / dt
-#    else:
-        
+    e_prime.append([])
+    C_prime.append([])
+    P.append([])
+#    P = -1 * ( S[i-1] / pres_vapsat[i-1] ) * (pres_vapsat[i] - pres_vapsat[i-1])/dt
+    P[i] = -S[i-1] * (Lv/Rv)/temperature[i-1]**2 * taux_refroidissement
+    S_prime = S[i-1] + P[i]*dt
+    e_prime[i] = pres_vapsat[i] * S_prime
+    C_prime[i] = 1/pres_vapsat[i] * (e_prime[i] - e_prime[i-1])/dt
+    S_double_prime = S[i-1] + (P[i] - C_prime[i])*dt
+    S[i] = S_double_prime
 
     # Variables diagnostiques
 #    rayon[i] = 3*qw[i] / (4*pi*rho_w*N[i])
