@@ -20,12 +20,16 @@ version_prelim = True
 dt = 1 # sec
 timerange = (8*60*60)*dt # 8 heures
 pres = 1000e2 # Pa
-taux_refroidissement = -10/(24*60*60) # K/s
+taux_refroidissement = 10/(24*60*60) # K/s
 Rd = 287.04 # J/kgK
 Rv = 461.51 # J/kgK
 Lv = 2.4656e6 # J/kg
 cp = 1005 # J/kg
 cv = cp - Rd
+
+# Constantes Twomey
+C_twomey = 2000
+k_twomey = 0.7
 
 # Variables initiales
 S = [1]
@@ -49,8 +53,14 @@ P = [0]
 # Pression de vapeur saturante pour un pas de 8h (fonction de T)
 pres_vapsat = []
 pres_vapsat.append(pres_vapsat_initial)
+pres_vap = []
+pres_vap.append(pres_vap_initial)
+N_CCN = [0]
 for i in range(1,timerange+1): # Début boucle temporelle
+    N_CCN.append([])
+
     # Variables pronostiques
+    pres_vap.append([])
     pres_vapsat.append([])
     pres_vapsat[i] = pres_vapsat[i-1] + (Lv/Rv)*pres_vapsat[i-1]*taux_refroidissement*dt/temperature[i]**2
 
@@ -59,13 +69,28 @@ for i in range(1,timerange+1): # Début boucle temporelle
     e_prime.append([])
     C_prime.append([])
     P.append([])
-#    P = -1 * ( S[i-1] / pres_vapsat[i-1] ) * (pres_vapsat[i] - pres_vapsat[i-1])/dt
+
     P[i] = -S[i-1] * (Lv/Rv)/temperature[i-1]**2 * taux_refroidissement
     S_prime = S[i-1] + P[i]*dt
     e_prime[i] = pres_vapsat[i] * S_prime
     C_prime[i] = 1/pres_vapsat[i] * (e_prime[i] - e_prime[i-1])/dt
     S_double_prime = S[i-1] + (P[i] - C_prime[i])*dt
-    S[i] = S_double_prime
+
+    if (S_double_prime < 1):
+        C_ajuste = P[i] - (1 - S[i-1])/dt
+        S[i] = S[i-1] + (P[i] - C_ajuste)*dt
+        pres_vap[i] = C_ajuste*pres_vapsat[i]*dt + pres_vap[i-1]
+        delta_masse_condensation = (pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
+    elif (S_double_prime > 1) and (not activ):
+        activ = True
+        delta_activation = 0
+        N_CCN[i] = C_twomey * (S_double_prime - 1)**k_twomey
+        S[i] = S_double_prime
+    elif (S_double_prime > 1) and (activ):
+        delai_activation = delta_activation + 1
+        N_CCN[i] = C_twomey * S_double_prime - N_CCN[i-i]
+        if delai_activation > 1000:
+            activ = False
 
     # Variables diagnostiques
 #    rayon[i] = 3*qw[i] / (4*pi*rho_w*N[i])
