@@ -48,14 +48,13 @@ if version_prelim:
 dt_list = np.arange(0, timerange+1, dt) # Pas de temps dans une liste
 temperature = temperature_initial + dt_list*taux_refroidissement # Températures pour un pas de temps de 8h
 
+# Valeurs initiales
+N_CCN = [0]
+pres_vap = [pres_vap_initial]
+pres_vapsat = [pres_vapsat_initial]
 C_prime = [0]
 P = [0]
-# Pression de vapeur saturante pour un pas de 8h (fonction de T)
-pres_vapsat = []
-pres_vapsat.append(pres_vapsat_initial)
-pres_vap = []
-pres_vap.append(pres_vap_initial)
-N_CCN = [0]
+S_double_prime = [1]
 for i in range(1,timerange+1): # Début boucle temporelle
     # Ajout d'un element dans les variables enregistrees
     N_CCN.append([])
@@ -65,6 +64,9 @@ for i in range(1,timerange+1): # Début boucle temporelle
     e_prime.append([])
     C_prime.append([])
     P.append([])
+    S_double_prime.append([])
+
+    activ = False
 
     # Variables pronostiques
     pres_vapsat[i] = pres_vapsat[i-1] + (Lv/Rv)*pres_vapsat[i-1]*taux_refroidissement*dt/temperature[i]**2
@@ -74,26 +76,27 @@ for i in range(1,timerange+1): # Début boucle temporelle
     S_prime = S[i-1] + P[i]*dt
     e_prime[i] = pres_vapsat[i] * S_prime
     C_prime[i] = 1/pres_vapsat[i] * (e_prime[i] - e_prime[i-1])/dt
-    S_double_prime = S[i-1] + (P[i] - C_prime[i])*dt
+    S_double_prime[i] = S[i-1] + (P[i] - C_prime[i])*dt
 
     # Activation des aerosols
-    if (S_double_prime < 1): # pas d'activation
+    if (S_double_prime[i] < 1): # pas d'activation
         C_ajuste = P[i] - (1 - S[i-1])/dt
         S[i] = S[i-1] + (P[i] - C_ajuste)*dt
         pres_vap[i] = C_ajuste*pres_vapsat[i]*dt + pres_vap[i-1]
         delta_masse_condensation = (pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
 
-    elif (S_double_prime > 1) and (not activ): # première activation
-        activ = True
-        delta_activation = 0
-        N_CCN[i] = C_twomey * (S_double_prime - 1)**k_twomey
-        S[i] = S_double_prime
-
-    elif (S_double_prime > 1) and (activ): # activation si deja active, pour delai "realiste"
-        delai_activation = delta_activation + 1
-        N_CCN[i] = C_twomey * S_double_prime - N_CCN[i-i]
-        if delai_activation > 1000:
-            activ = False
+    elif (S_double_prime[i] > 1): # activation
+        if not activ: # première activation
+            activ = True
+            delta_activation = 0
+            N_CCN[i] = C_twomey * (S_double_prime[i] - 1)**k_twomey
+            #S[i] = S_double_prime[i]
+    
+        elif activ: # si déjà activé, reste activé pour un délai réaliste
+            delai_activation = delta_activation + 1
+            N_CCN[i] = C_twomey * S_double_prime[i] - N_CCN[i-i]
+            if delai_activation > 3600:
+                activ = False
 
     # Variables diagnostiques
 #    rayon[i] = 3*qw[i] / (4*pi*rho_w*N[i])
@@ -110,13 +113,26 @@ if test:
     print(pres_vapsat[timerange]) # esw après 8 heures
 
 # Graphiques
-# Pour temperature
-plot_temperature = plt.figure(1)
-plt.plot(dt_list,temperature)
+# 
+plt.figure(1)
+plt.plot(dt_list[1:-1],S_double_prime[1:-1])
+plt.title('S_double_prime')
 
-# Pour presvapsat
-plot_presvapsat = plt.figure(2)
+#
+plt.figure(2)
+plt.plot(dt_list,S)
+plt.title('S')
+
+#
+plt.figure(3)
 plt.plot(dt_list,pres_vapsat)
+plt.title('e_sw')
+
+#
+plt.figure(4)
+plt.plot(dt_list,pres_vap)
+plt.title('e')
+
 
 plt.show()
 
