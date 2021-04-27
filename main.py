@@ -57,36 +57,39 @@ pres_vap = []
 pres_vap.append(pres_vap_initial)
 N_CCN = [0]
 for i in range(1,timerange+1): # Début boucle temporelle
+    # Ajout d'un element dans les variables enregistrees
     N_CCN.append([])
-
-    # Variables pronostiques
     pres_vap.append([])
     pres_vapsat.append([])
-    pres_vapsat[i] = pres_vapsat[i-1] + (Lv/Rv)*pres_vapsat[i-1]*taux_refroidissement*dt/temperature[i]**2
-
-    # Calcul de S (avec approximation)
     S.append([])
     e_prime.append([])
     C_prime.append([])
     P.append([])
 
+    # Variables pronostiques
+    pres_vapsat[i] = pres_vapsat[i-1] + (Lv/Rv)*pres_vapsat[i-1]*taux_refroidissement*dt/temperature[i]**2
+
+    # Calcul de S (avec approximation)
     P[i] = -S[i-1] * (Lv/Rv)/temperature[i-1]**2 * taux_refroidissement
     S_prime = S[i-1] + P[i]*dt
     e_prime[i] = pres_vapsat[i] * S_prime
     C_prime[i] = 1/pres_vapsat[i] * (e_prime[i] - e_prime[i-1])/dt
     S_double_prime = S[i-1] + (P[i] - C_prime[i])*dt
 
-    if (S_double_prime < 1):
+    # Activation des aerosols
+    if (S_double_prime < 1): # pas d'activation
         C_ajuste = P[i] - (1 - S[i-1])/dt
         S[i] = S[i-1] + (P[i] - C_ajuste)*dt
         pres_vap[i] = C_ajuste*pres_vapsat[i]*dt + pres_vap[i-1]
         delta_masse_condensation = (pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
-    elif (S_double_prime > 1) and (not activ):
+
+    elif (S_double_prime > 1) and (not activ): # première activation
         activ = True
         delta_activation = 0
         N_CCN[i] = C_twomey * (S_double_prime - 1)**k_twomey
         S[i] = S_double_prime
-    elif (S_double_prime > 1) and (activ):
+
+    elif (S_double_prime > 1) and (activ): # activation si deja active, pour delai "realiste"
         delai_activation = delta_activation + 1
         N_CCN[i] = C_twomey * S_double_prime - N_CCN[i-i]
         if delai_activation > 1000:
