@@ -20,12 +20,14 @@ version_prelim = True
 dt = 1 # sec
 timerange = (8*60*60)*dt # 8 heures
 pres = 1000e2 # Pa
-taux_refroidissement = 10/(24*60*60) # K/s
+taux_refroidissement = -2/(24*60*60) # K/s
 Rd = 287.04 # J/kgK
 Rv = 461.51 # J/kgK
 Lv = 2.4656e6 # J/kg
 cp = 1005 # J/kg
 cv = cp - Rd
+rho_w = 997 
+H = 200
 
 # Constantes Twomey
 C_twomey = 2000
@@ -43,6 +45,10 @@ if version_prelim:
     rayon_initial = 0.2e-6 # m
     concentration_initial = 1000
     masse_initial = qv
+else:
+    rayon_initial = 0.2e-6
+    concentration_initial = 1000
+    masse_initial = 0
 
 # Boucle temporelle
 dt_list = np.arange(0, timerange+1, dt) # Pas de temps dans une liste
@@ -53,8 +59,11 @@ N_CCN = [0]
 pres_vap = [pres_vap_initial]
 pres_vapsat = [pres_vapsat_initial]
 C_prime = [0]
+C_double_prime = [0]
 P = [0]
 S_double_prime = [1]
+rayon = [rayon_initial]
+masse_activation = [masse_initial]
 for i in range(1,timerange+1): # Début boucle temporelle
     # Ajout d'un element dans les variables enregistrees
     N_CCN.append([])
@@ -63,8 +72,11 @@ for i in range(1,timerange+1): # Début boucle temporelle
     S.append([])
     e_prime.append([])
     C_prime.append([])
+    C_double_prime.append([])
     P.append([])
     S_double_prime.append([])
+    rayon.append([])
+    masse_activation.append([])
 
     activ = False
 
@@ -77,29 +89,51 @@ for i in range(1,timerange+1): # Début boucle temporelle
     e_prime[i] = pres_vapsat[i] * S_prime
     C_prime[i] = 1/pres_vapsat[i] * (e_prime[i] - e_prime[i-1])/dt
     S_double_prime[i] = S[i-1] + (P[i] - C_prime[i])*dt
+    TEST = S_double_prime
 
     # Activation des aerosols
-    if (S_double_prime[i] < 1): # pas d'activation
-        C_ajuste = P[i] - (1 - S[i-1])/dt
-        S[i] = S[i-1] + (P[i] - C_ajuste)*dt
-        pres_vap[i] = C_ajuste*pres_vapsat[i]*dt + pres_vap[i-1]
-        delta_masse_condensation = (pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
+    if version_prelim:
+        S[i] = S_double_prime[i]
+    if not version_prelim:
+        if (S_double_prime[i] < 1): # pas d'activation
+            C_ajuste = P[i] - (1 - S[i-1])/dt
+            S[i] = S[i-1] + (P[i] - C_ajuste)*dt
+            pres_vap[i] = C_ajuste*pres_vapsat[i]*dt + pres_vap[i-1]
+            delta_masse_condensation = (pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
 
-    elif (S_double_prime[i] > 1): # activation
-        if not activ: # première activation
+        elif (S_double_prime[i] > 1): # activation
+            #if not activ: # première activation
             activ = True
-            delta_activation = 0
+            delai_activation = 0
             N_CCN[i] = C_twomey * (S_double_prime[i] - 1)**k_twomey
-            #S[i] = S_double_prime[i]
-    
-        elif activ: # si déjà activé, reste activé pour un délai réaliste
-            delai_activation = delta_activation + 1
-            N_CCN[i] = C_twomey * S_double_prime[i] - N_CCN[i-i]
-            if delai_activation > 3600:
-                activ = False
+        
+            #elif activ: # si déjà activé, reste activé pour un délai réaliste
+            #    delai_activation = delta_activation + 1
+            #    N_CCN[i] = C_twomey * S_double_prime[i] - N_CCN[i-i]
+            #    if delai_activation > 3600:
+            #        activ = False
 
-    # Variables diagnostiques
-#    rayon[i] = 3*qw[i] / (4*pi*rho_w*N[i])
+            # (qw)_activation
+            masse_activation[i] = rayon[i-1]**3 * 4*np.pi*rho_w*N_CCN[i] / 3 
+            delta_masse_activation = ( masse_activation[i] - masse_activation[i-1] )/dt
+            C_double_prime[i] = delta_masse_activation * (Rv*pres) / Rd / pres_vapsat[i]
+
+            S_double_prime[i] = S[i-1] + (P[i] - C_prime[i] - C_double_prime[i])*dt
+
+            C_ajuste = C_prime[i] + C_double_prime[i]
+            pres_vap[i] = C_ajuste*pres_vapsat[i]*dt + pres_vap[i-1]
+            delta_masse_condensation = (pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
+
+            if (S_double_prime[i] > 1):
+                S[i] = S_double_prime[i]
+
+        # Précipitation
+        vitesse = 1.19e6 * 100 * rayon[i-1]**2
+        masse_precipitation = vitesse * masse_activation[i] / H
+        N_precipitation = 3*masse_precipitation / ( rayon[i-1]**3 * 4*np.pi*rho_w )
+
+        # rayon finale
+        rayon[i] = ( (3 / (4*np.pi*rho_w)) * (masse_activation[i] + masse_precipitation)/(N_CCN[i] + N_precipitation) )**(1/3)
 
 # Fin boucle temporelle
 
@@ -128,10 +162,10 @@ plt.figure(3)
 plt.plot(dt_list,pres_vapsat)
 plt.title('e_sw')
 
-#
-plt.figure(4)
-plt.plot(dt_list,pres_vap)
-plt.title('e')
+##
+#plt.figure(4)
+#plt.plot(dt_list,pres_vap)
+#plt.title('e')
 
 
 plt.show()
