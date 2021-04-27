@@ -17,8 +17,8 @@ test = False
 version_prelim = True
 
 # Constantes d'entrées
-timerange = (8*60*60)*dt # 8 heures
 dt = 1 # sec
+timerange = (8*60*60)*dt # 8 heures
 pres = 1000e2 # Pa
 taux_refroidissement = -10/(24*60*60) # K/s
 Rd = 287.04 # J/kgK
