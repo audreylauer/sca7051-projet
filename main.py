@@ -14,13 +14,13 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 test = False
-version_prelim = True
+version_prelim = False
 
 # Constantes d'entrées
 dt = 1 # sec
 timerange = (8*60*60)*dt # 8 heures
 pres = 1000e2 # Pa
-taux_refroidissement = -2/(24*60*60) # K/s
+taux_refroidissement = -10/(24*60*60) # K/s
 Rd = 287.04 # J/kgK
 Rv = 461.51 # J/kgK
 Lv = 2.4656e6 # J/kg
@@ -101,7 +101,7 @@ for i in range(1,timerange+1): # Début boucle temporelle
             pres_vap[i] = C_ajuste*pres_vapsat[i]*dt + pres_vap[i-1]
             delta_masse_condensation = (pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
 
-        elif (S_double_prime[i] > 1): # activation
+        else: # activation
             #if not activ: # première activation
             activ = True
             delai_activation = 0
@@ -120,20 +120,22 @@ for i in range(1,timerange+1): # Début boucle temporelle
 
             S_double_prime[i] = S[i-1] + (P[i] - C_prime[i] - C_double_prime[i])*dt
 
-            C_ajuste = C_prime[i] + C_double_prime[i]
-            pres_vap[i] = C_ajuste*pres_vapsat[i]*dt + pres_vap[i-1]
-            delta_masse_condensation = (pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
+            if (S_double_prime[i] < 1):
+                C_ajuste = P[i] - (1 - S[i-1])/dt
+                pres_vap[i] = C_ajuste*pres_vapsat[i]*dt + pres_vap[i-1]
+                delta_masse_condensation = (pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
 
-            if (S_double_prime[i] > 1):
+            else:
                 S[i] = S_double_prime[i]
+                pres_vap[i] = (C_prime[i] + C_double_prime[i])*pres_vapsat[i]*dt + pres_vap[i-1]
 
-        # Précipitation
-        vitesse = 1.19e6 * 100 * rayon[i-1]**2
-        masse_precipitation = vitesse * masse_activation[i] / H
-        N_precipitation = 3*masse_precipitation / ( rayon[i-1]**3 * 4*np.pi*rho_w )
+            # Précipitation
+            vitesse = 1.19e6 * 100 * rayon[i-1]**2
+            masse_precipitation = vitesse * masse_activation[i] / H
+            N_precipitation = 3*masse_precipitation / ( rayon[i-1]**3 * 4*np.pi*rho_w )
 
-        # rayon finale
-        rayon[i] = ( (3 / (4*np.pi*rho_w)) * (masse_activation[i] + masse_precipitation)/(N_CCN[i] + N_precipitation) )**(1/3)
+            # rayon finale
+            rayon[i] = ( (3 / (4*np.pi*rho_w)) * (masse_activation[i] + masse_precipitation)/(N_CCN[i] + N_precipitation) )**(1/3)
 
 # Fin boucle temporelle
 
