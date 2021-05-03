@@ -27,7 +27,7 @@ Lv = 2.4656e6 # J/kg
 cp = 1005 # J/kg
 cv = cp - Rd
 rho_w = 997 
-H = 200
+H = 250
 
 # Constantes Twomey
 C_twomey = 2000
@@ -64,7 +64,9 @@ P = [0]
 S_double_prime = [1]
 rayon = [rayon_initial]
 masse_activation = [masse_initial]
-for i in range(1,timerange+1): # Début boucle temporelle
+
+# Début de la boucle temporelle
+for i in range(1,timerange+1): 
     # Ajout d'un element dans les variables enregistrees
     N_CCN.append([])
     pres_vap.append([])
@@ -78,41 +80,33 @@ for i in range(1,timerange+1): # Début boucle temporelle
     rayon.append([])
     masse_activation.append([])
 
-    activ = False
-
     # Variables pronostiques
     pres_vapsat[i] = pres_vapsat[i-1] + (Lv/Rv)*pres_vapsat[i-1]*taux_refroidissement*dt/temperature[i]**2
 
-    # Calcul de S (avec approximation)
+    # Calcul de S prelim
     P[i] = -S[i-1] * (Lv/Rv)/temperature[i-1]**2 * taux_refroidissement
     S_prime = S[i-1] + P[i]*dt
     e_prime[i] = pres_vapsat[i] * S_prime
     C_prime[i] = 1/pres_vapsat[i] * (e_prime[i] - e_prime[i-1])/dt
     S_double_prime[i] = S[i-1] + (P[i] - C_prime[i])*dt
-    TEST = S_double_prime
 
-    # Activation des aerosols
-    if version_prelim:
+    # calculer la masse_condensation avec le C_prime
+
+    # Activation des aerosols (regarder ce qui reste qui n'a pas condensé)
+    if version_prelim: # test sans jamais activer les aerosols
         S[i] = S_double_prime[i]
-    if not version_prelim:
-        if (S_double_prime[i] < 1): # pas d'activation
+
+    if not version_prelim: # vrai code
+        if (S_double_prime[i] < 1): # pas d'activation (pas assez de vapeur)
             C_ajuste = P[i] - (1 - S[i-1])/dt
             S[i] = S[i-1] + (P[i] - C_ajuste)*dt
             pres_vap[i] = C_ajuste*pres_vapsat[i]*dt + pres_vap[i-1]
             delta_masse_condensation = (pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
 
-        else: # activation
-            #if not activ: # première activation
-            activ = True
-            delai_activation = 0
+        else: # activation (assez de vapeur)
+            # Relation de Twomey
             N_CCN[i] = C_twomey * (S_double_prime[i] - 1)**k_twomey
         
-            #elif activ: # si déjà activé, reste activé pour un délai réaliste
-            #    delai_activation = delta_activation + 1
-            #    N_CCN[i] = C_twomey * S_double_prime[i] - N_CCN[i-i]
-            #    if delai_activation > 3600:
-            #        activ = False
-
             # (qw)_activation
             masse_activation[i] = rayon[i-1]**3 * 4*np.pi*rho_w*N_CCN[i] / 3 
             delta_masse_activation = ( masse_activation[i] - masse_activation[i-1] )/dt
@@ -120,6 +114,7 @@ for i in range(1,timerange+1): # Début boucle temporelle
 
             S_double_prime[i] = S[i-1] + (P[i] - C_prime[i] - C_double_prime[i])*dt
 
+            # Re-regarder s'il reste assez de vapeur (?)
             if (S_double_prime[i] < 1):
                 C_ajuste = P[i] - (1 - S[i-1])/dt
                 pres_vap[i] = C_ajuste*pres_vapsat[i]*dt + pres_vap[i-1]
@@ -134,7 +129,7 @@ for i in range(1,timerange+1): # Début boucle temporelle
             masse_precipitation = vitesse * masse_activation[i] / H
             N_precipitation = 3*masse_precipitation / ( rayon[i-1]**3 * 4*np.pi*rho_w )
 
-            # rayon finale
+            # rayon final
             rayon[i] = ( (3 / (4*np.pi*rho_w)) * (masse_activation[i] + masse_precipitation)/(N_CCN[i] + N_precipitation) )**(1/3)
 
 # Fin boucle temporelle
