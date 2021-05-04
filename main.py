@@ -20,7 +20,6 @@ version_prelim = False
 dt = 1 # sec
 timerange = (8*60*60)*dt # 8 heures
 pres = 1000e2 # Pa
-taux_refroidissement = -10/(24*60*60) # K/s
 Rd = 287.04 # J/kgK
 Rv = 461.51 # J/kgK
 Lv = 2.4656e6 # J/kg
@@ -52,7 +51,25 @@ else:
 
 # Boucle temporelle
 dt_list = np.arange(0, timerange+1, dt) # Pas de temps dans une liste
-temperature = temperature_initial + dt_list*taux_refroidissement # Températures pour un pas de temps de 8h
+taux_constant = False
+if taux_constant:
+    taux_refroidissement = -10/(24*60*60) # K/s
+    temperature = temperature_initial + dt_list*taux_refroidissement # Températures pour un pas de temps de 8h
+elif not taux_constant:
+    taux_refroidissement = np.zeros(timerange+1)
+    temperature = np.zeros(timerange+1)
+    taux_1 = -10/(24*60*60)
+    temps_1 = 6*60*60
+    taux_2 = -10/(24*60*60)
+    temps_2 = 8*60*60
+    for i in range(timerange+1):
+        t = dt_list[i]
+        if (t <= temps_1):
+            taux_refroidissement[i] = taux_1 
+        elif (t > temps_1) and (i <= temps_2):
+            taux_refroidissement[i] = taux_2
+
+        temperature[i] = temperature_initial + taux_refroidissement[i]
 
 # Valeurs initiales
 N_CCN = [0]
@@ -83,10 +100,10 @@ for i in range(1,timerange+1):
     masse_condensation.append([])
 
     # Variables pronostiques
-    pres_vapsat[i] = pres_vapsat[i-1] + (Lv/Rv)*pres_vapsat[i-1]*taux_refroidissement*dt/temperature[i]**2
+    pres_vapsat[i] = pres_vapsat[i-1] + (Lv/Rv)*pres_vapsat[i-1]*taux_refroidissement[i]*dt/temperature[i]**2
 
     # Calcul de S prelim
-    P[i] = -S[i-1] * (Lv/Rv)/temperature[i-1]**2 * taux_refroidissement
+    P[i] = -S[i-1] * (Lv/Rv)/temperature[i-1]**2 * taux_refroidissement[i]
     S_prime = S[i-1] + P[i]*dt
     e_prime[i] = pres_vapsat[i] * S_prime
     C_prime[i] = 1/pres_vapsat[i] * (e_prime[i] - e_prime[i-1])/dt
@@ -137,7 +154,8 @@ for i in range(1,timerange+1):
     N_precipitation = 3*masse_precipitation / ( rayon[i-1]**3 * 4*np.pi*rho_w )
 
     # rayon final
-    rayon[i] = ( (3 / (4*np.pi*rho_w)) * (masse_activation[i] + masse_condensation[i] + masse_precipitation)/(N_CCN[i] + N_precipitation) )**(1/3)
+    #rayon[i] = ( (3 / (4*np.pi*rho_w)) * (masse_activation[i] + masse_condensation[i] + masse_precipitation)/(N_CCN[i] + N_precipitation) )**(1/3)
+    rayon[i] = ( (3 / (4*np.pi*rho_w)) * (masse_activation[i] + masse_precipitation)/(N_CCN[i] + N_precipitation) )**(1/3)
 
 # Fin boucle temporelle
 
