@@ -64,6 +64,7 @@ P = [0]
 S_double_prime = [1]
 rayon = [rayon_initial]
 masse_activation = [masse_initial]
+masse_condensation = [0]
 
 # Début de la boucle temporelle
 for i in range(1,timerange+1): 
@@ -79,6 +80,7 @@ for i in range(1,timerange+1):
     S_double_prime.append([])
     rayon.append([])
     masse_activation.append([])
+    masse_condensation.append([])
 
     # Variables pronostiques
     pres_vapsat[i] = pres_vapsat[i-1] + (Lv/Rv)*pres_vapsat[i-1]*taux_refroidissement*dt/temperature[i]**2
@@ -102,6 +104,7 @@ for i in range(1,timerange+1):
             S[i] = S[i-1] + (P[i] - C_ajuste)*dt
             pres_vap[i] = pres_vapsat[i] * S[i]
             delta_masse_condensation = (pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
+            masse_condensation[i] = masse_condensation[i-1] + delta_masse_condensation*dt
 
         else: # activation (assez de vapeur)
             # Relation de Twomey
@@ -119,12 +122,14 @@ for i in range(1,timerange+1):
                 C_ajuste = P[i] - (1 - S[i-1])/dt
                 pres_vap[i] = C_ajuste*pres_vapsat[i]*dt + pres_vap[i-1]
                 delta_masse_condensation = (pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
+                masse_condensation[i] = masse_condensation[i-1] + delta_masse_condensation*dt
                 S[i] = 1
 
             else:
                 S[i] = S_double_prime[i]
-                #pres_vap[i] = (C_prime[i] + C_double_prime[i])*pres_vapsat[i]*dt + pres_vap[i-1]
                 pres_vap[i] = pres_vapsat[i] * S[i]
+                delta_masse_condensation = (pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
+                masse_condensation[i] = masse_condensation[i-1] + delta_masse_condensation*dt
 
     # Précipitation
     vitesse = 1.19e6 * 100 * rayon[i-1]**2
@@ -132,7 +137,7 @@ for i in range(1,timerange+1):
     N_precipitation = 3*masse_precipitation / ( rayon[i-1]**3 * 4*np.pi*rho_w )
 
     # rayon final
-    rayon[i] = ( (3 / (4*np.pi*rho_w)) * (masse_activation[i] + masse_precipitation)/(N_CCN[i] + N_precipitation) )**(1/3)
+    rayon[i] = ( (3 / (4*np.pi*rho_w)) * (masse_activation[i] + masse_condensation[i] + masse_precipitation)/(N_CCN[i] + N_precipitation) )**(1/3)
 
 # Fin boucle temporelle
 
