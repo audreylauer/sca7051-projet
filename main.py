@@ -100,7 +100,7 @@ for i in range(1,timerange+1):
         if (S_double_prime[i] < 1): # pas d'activation (pas assez de vapeur)
             C_ajuste = P[i] - (1 - S[i-1])/dt
             S[i] = S[i-1] + (P[i] - C_ajuste)*dt
-            pres_vap[i] = C_ajuste*pres_vapsat[i]*dt + pres_vap[i-1]
+            pres_vap[i] = pres_vapsat[i] * S[i]
             delta_masse_condensation = (pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
 
         else: # activation (assez de vapeur)
@@ -110,7 +110,7 @@ for i in range(1,timerange+1):
             # (qw)_activation
             masse_activation[i] = rayon[i-1]**3 * 4*np.pi*rho_w*N_CCN[i] / 3 
             delta_masse_activation = ( masse_activation[i] - masse_activation[i-1] )/dt
-            C_double_prime[i] = delta_masse_activation * (Rv*pres) / Rd / pres_vapsat[i]
+            C_double_prime[i] = - delta_masse_activation * (Rv*pres) / Rd / pres_vapsat[i]
 
             S_double_prime[i] = S[i-1] + (P[i] - C_prime[i] - C_double_prime[i])*dt
 
@@ -119,18 +119,20 @@ for i in range(1,timerange+1):
                 C_ajuste = P[i] - (1 - S[i-1])/dt
                 pres_vap[i] = C_ajuste*pres_vapsat[i]*dt + pres_vap[i-1]
                 delta_masse_condensation = (pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
+                S[i] = 1
 
             else:
                 S[i] = S_double_prime[i]
-                pres_vap[i] = (C_prime[i] + C_double_prime[i])*pres_vapsat[i]*dt + pres_vap[i-1]
+                #pres_vap[i] = (C_prime[i] + C_double_prime[i])*pres_vapsat[i]*dt + pres_vap[i-1]
+                pres_vap[i] = pres_vapsat[i] * S[i]
 
-            # Précipitation
-            vitesse = 1.19e6 * 100 * rayon[i-1]**2
-            masse_precipitation = vitesse * masse_activation[i] / H
-            N_precipitation = 3*masse_precipitation / ( rayon[i-1]**3 * 4*np.pi*rho_w )
+    # Précipitation
+    vitesse = 1.19e6 * 100 * rayon[i-1]**2
+    masse_precipitation = vitesse * masse_activation[i] / H
+    N_precipitation = 3*masse_precipitation / ( rayon[i-1]**3 * 4*np.pi*rho_w )
 
-            # rayon final
-            rayon[i] = ( (3 / (4*np.pi*rho_w)) * (masse_activation[i] + masse_precipitation)/(N_CCN[i] + N_precipitation) )**(1/3)
+    # rayon final
+    rayon[i] = ( (3 / (4*np.pi*rho_w)) * (masse_activation[i] + masse_precipitation)/(N_CCN[i] + N_precipitation) )**(1/3)
 
 # Fin boucle temporelle
 
