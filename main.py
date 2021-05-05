@@ -64,7 +64,7 @@ elif not taux_constant:
     temperature[0] = temperature_initial
     taux_1 = -5/(24*60*60)
     temps_1 = 8*60*60
-    taux_2 = -5/(24*60*60)
+    taux_2 = 12/(24*60*60)
     temps_2 = 12*60*60
 
     for i in range(timerange+1):
@@ -194,38 +194,27 @@ for i in range(1,timerange+1):
 
 # Fin boucle temporelle
 
-# Tests
-if test:
-    print(temperature[0]) # Température initiale
-    print(temperature[4320]) # T après 1.2 heures
-    print(temperature[timerange]) # T après 8 heures
-    print(pres_vapsat[0]) # esw initial
-    print(pres_vapsat[4320]) # esw après 1.2 heures
-    print(pres_vapsat[timerange]) # esw après 8 heures
-
 # Graphiques
-# 
-#plt.figure(1)
-#plt.plot(dt_list[1:-1],S_double_prime[1:-1])
-#plt.title('S_double_prime')
+ 
+plt.figure(1)
+plt.plot(dt_list[1:-1],S_double_prime[1:-1])
+plt.title('S_double_prime')
+
 #
-##
-#plt.figure(2)
-#plt.plot(dt_list,S)
-#plt.title('S')
+plt.figure(2)
+plt.plot(dt_list,S)
+plt.title('S')
+
 #
-##
-#plt.figure(3)
-#plt.plot(dt_list,pres_vapsat)
-#plt.title('e_sw')
+plt.figure(3)
+plt.plot(dt_list,pres_vapsat)
+plt.title('e_sw')
+
 #
-##
-#plt.figure(4)
-#plt.plot(dt_list,pres_vap)
-#plt.title('e')
+plt.figure(4)
+plt.plot(dt_list,pres_vap)
+plt.title('e')
 
 
 plt.show()
 
-# Je me surprends moi même d'avoir réussi à faire ça. J'ai bel et bien checker pour esw et c'est pas une droite, mais une très légerte courbe.
-# J'ai fait le test en changeant dT/dt pour -20/86400, j'ai été récupéré la valeur de esw que j'obtenais pour T=14C, et je l'ai comparée avec la table des constantes, et c'est pareil (1597.6), donc ça marche!
