@@ -49,20 +49,24 @@ else:
     masse_initial = 0
 
 # Boucle temporelle
+# temperature et sa variation
 timerange = (12*60*60)*dt # 8 heures
 dt_list = np.arange(0, timerange+1, dt) # Pas de temps dans une liste
 taux_constant = False
+
 if taux_constant:
     taux_refroidissement = -10/(24*60*60) # K/s
     temperature = temperature_initial + dt_list*taux_refroidissement # Températures pour un pas de temps de 8h
+
 elif not taux_constant:
     taux_refroidissement = np.zeros(timerange+1)
     temperature = np.zeros(timerange+1)
     temperature[0] = temperature_initial
-    taux_1 = -5/(24*60*60)
+    taux_1 = -10/(24*60*60)
     temps_1 = 8*60*60
-    taux_2 = 5/(24*60*60)
+    taux_2 = -10/(24*60*60)
     temps_2 = 12*60*60
+
     for i in range(timerange+1):
         t = dt_list[i]
         if (t <= temps_1):
@@ -113,7 +117,7 @@ for i in range(1,timerange+1):
     P[i] = -S[i-1] * (Lv/Rv)/temperature[i-1]**2 * taux_refroidissement[i]
     S_prime = S[i-1] + P[i]*dt
     e_prime[i] = pres_vapsat[i] * S_prime
-    C_prime[i] = (1/pres_vapsat[i]) * (e_prime[i] - e_prime[i-1])/dt
+    C_prime[i] = (1/pres_vapsat[i-1]) * (e_prime[i] - e_prime[i-1])/dt
     S_double_prime[i] = S[i-1] + (P[i] - C_prime[i])*dt
 
     # calculer la masse_condensation avec le C_prime
@@ -123,6 +127,11 @@ for i in range(1,timerange+1):
     # Activation des aerosols (regarder ce qui reste qui n'a pas condensé)
     if version_prelim: # test sans jamais activer les aerosols
         S[i] = S_double_prime[i]
+        pres_vap[i] = pres_vapsat[i] * S[i]
+        delta_masse_condensation = -1*(e_prime[i] - e_prime[i-1])/dt * Rd / (Rv*pres)
+        masse_condensation[i] = masse_condensation[i-1] + delta_masse_condensation*dt
+
+        rayon[i] = ( (3 / (4*np.pi*rho_w)) * (masse_condensation[i])/(1000) )**(1/3)
 
     if not version_prelim: # vrai code
         if (S_double_prime[i] < 1): # pas d'activation (pas assez de vapeur)
@@ -132,6 +141,7 @@ for i in range(1,timerange+1):
             #delta_masse_condensation = -1*(pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
             #masse_condensation[i] = masse_condensation[i-1] + delta_masse_condensation*dt
 
+            N_CCN[i] = 0.
             masse_activation[i] = 0.
 
         else: # activation (assez de vapeur)
@@ -147,10 +157,12 @@ for i in range(1,timerange+1):
 
             # Re-regarder s'il reste assez de vapeur (?)
             if (S_double_prime[i] < 1):
+                print('>1 puis <1')
+                print(i)
                 C_ajuste = P[i] - (1 - S[i-1])/dt
                 pres_vap[i] = C_ajuste*pres_vapsat[i]*dt + pres_vap[i-1]
-           #     delta_masse_condensation = -1*(pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
-           #     masse_condensation[i] = masse_condensation[i-1] + delta_masse_condensation*dt
+                #delta_masse_condensation = -1*(pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
+                #masse_condensation[i] = masse_condensation[i-1] + delta_masse_condensation*dt
                 S[i] = 1
 
             else:
