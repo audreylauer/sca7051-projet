@@ -62,9 +62,9 @@ elif not taux_constant:
     taux_refroidissement = np.zeros(timerange+1)
     temperature = np.zeros(timerange+1)
     temperature[0] = temperature_initial
-    taux_1 = -10/(24*60*60)
+    taux_1 = -5/(24*60*60)
     temps_1 = 8*60*60
-    taux_2 = -10/(24*60*60)
+    taux_2 = -5/(24*60*60)
     temps_2 = 12*60*60
 
     for i in range(timerange+1):
@@ -92,6 +92,7 @@ rayon = [rayon_initial]
 masse_activation = [masse_initial]
 masse_condensation = [0]
 masse_precipitation = [0]
+N_precipitation = [0]
 
 # Début de la boucle temporelle
 for i in range(1,timerange+1): 
@@ -109,6 +110,7 @@ for i in range(1,timerange+1):
     masse_activation.append([])
     masse_condensation.append([])
     masse_precipitation.append([])
+    N_precipitation.append([])
 
     # Variables pronostiques
     pres_vapsat[i] = pres_vapsat[i-1] + (Lv/Rv)*pres_vapsat[i-1]*taux_refroidissement[i]*dt/temperature[i]**2
@@ -119,10 +121,6 @@ for i in range(1,timerange+1):
     e_prime[i] = pres_vapsat[i] * S_prime
     C_prime[i] = (1/pres_vapsat[i-1]) * (e_prime[i] - e_prime[i-1])/dt
     S_double_prime[i] = S[i-1] + (P[i] - C_prime[i])*dt
-
-    # calculer la masse_condensation avec le C_prime
-    delta_masse_condensation = -1*(e_prime[i] - e_prime[i-1])/dt * Rd / (Rv*pres)
-    masse_condensation[i] = masse_condensation[i-1] + delta_masse_condensation*dt
 
     # Activation des aerosols (regarder ce qui reste qui n'a pas condensé)
     if version_prelim: # test sans jamais activer les aerosols
@@ -135,16 +133,24 @@ for i in range(1,timerange+1):
 
     if not version_prelim: # vrai code
         if (S_double_prime[i] < 1): # pas d'activation (pas assez de vapeur)
-            C_ajuste = P[i] - (1 - S[i-1])/dt
-            S[i] = S[i-1] + (P[i] - C_ajuste)*dt
+
+            # calculer la masse_condensation avec le C_prime
+            masse_condensation[i] = 0.
+ 
+            #C_ajuste = P[i] - (1 - S[i-1])/dt
+            #S[i] = S[i-1] + (P[i] - C_ajuste)*dt
+            S[i] = S_double_prime[i]
             pres_vap[i] = pres_vapsat[i] * S[i]
-            #delta_masse_condensation = -1*(pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
-            #masse_condensation[i] = masse_condensation[i-1] + delta_masse_condensation*dt
 
             N_CCN[i] = 0.
             masse_activation[i] = 0.
 
-        else: # activation (assez de vapeur)
+        elif (S_double_prime[i] >= 1): # activation (assez de vapeur)
+
+            # calculer la masse_condensation avec le C_prime
+            delta_masse_condensation = -1*(e_prime[i] - e_prime[i-1])/dt * Rd / (Rv*pres)
+            masse_condensation[i] = masse_condensation[i-1] + delta_masse_condensation*dt
+
             # Relation de Twomey
             N_CCN[i] = C_twomey * (S_double_prime[i] - 1)**k_twomey
         
@@ -157,31 +163,33 @@ for i in range(1,timerange+1):
 
             # Re-regarder s'il reste assez de vapeur (?)
             if (S_double_prime[i] < 1):
+
                 print('>1 puis <1')
                 print(i)
-                C_ajuste = P[i] - (1 - S[i-1])/dt
-                pres_vap[i] = C_ajuste*pres_vapsat[i]*dt + pres_vap[i-1]
-                #delta_masse_condensation = -1*(pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
-                #masse_condensation[i] = masse_condensation[i-1] + delta_masse_condensation*dt
-                S[i] = 1
-
-            else:
+                #C_ajuste = P[i] - (1 - S[i-1])/dt
+                #pres_vap[i] = C_ajuste*pres_vapsat[i]*dt + pres_vap[i-1]
+                #S[i] = 1
                 S[i] = S_double_prime[i]
                 pres_vap[i] = pres_vapsat[i] * S[i]
-           #     delta_masse_condensation = -1*(pres_vap[i] - pres_vap[i-1])/dt * Rd / (Rv*pres)
-           #     masse_condensation[i] = masse_condensation[i-1] + delta_masse_condensation*dt
+
+            else:
+
+                S[i] = S_double_prime[i]
+                pres_vap[i] = pres_vapsat[i] * S[i]
   
     # masse totale
     masse_totale = masse_activation[i-1] + masse_condensation[i-1] + masse_precipitation[i-1]
+    N_total = N_CCN[i-1] + N_precipitation[i-1]
 
     # Précipitation
     vitesse = 1.19e8 * rayon[i-1]**2
     delta_masse_precipitation = vitesse * masse_totale / H
     masse_precipitation[i] = masse_precipitation[i-1] + delta_masse_precipitation*dt
-    N_precipitation = 3*masse_precipitation[i] / ( rayon[i-1]**3 * 4*np.pi*rho_w )
+    delta_N_precipitation = vitesse * N_total / H
+    N_precipitation[i] = N_precipitation[i-1] + delta_N_precipitation*dt
 
     # rayon final
-    rayon[i] = ( (3 / (4*np.pi*rho_w)) * (masse_activation[i] + masse_condensation[i] + masse_precipitation[i])/(N_CCN[i] + N_precipitation) )**(1/3)
+    rayon[i] = ( (3 / (4*np.pi*rho_w)) * (masse_activation[i] + masse_condensation[i] + masse_precipitation[i])/(N_CCN[i] + N_precipitation[i]) )**(1/3)
 #    rayon[i] = ( (3 / (4*np.pi*rho_w)) * (masse_activation[i] + masse_precipitation[i])/(N_CCN[i] + N_precipitation) )**(1/3)
 
 # Fin boucle temporelle
